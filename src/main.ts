@@ -1,3 +1,4 @@
+import { CreepFunctions } from "creepRoles";
 import { CreepJobStatus, CreepRole } from "enums";
 import { ErrorMapper } from "utils/ErrorMapper";
 
@@ -46,46 +47,12 @@ export const loop = ErrorMapper.wrapLoop(() => {
     let creep = Game.creeps[creepName];
     creepCount++;
 
-    // on demand memory cleaning
-    if (creep.ticksToLive === 1) {
-      creep.suicide();
-      console.log("killed" + creepName);
-      delete Memory.creeps[creepName];
+    CreepFunctions.memorySafeSuicideCheck(creep);
+
+    switch (creep.memory.role) {
+      case CreepRole.Worker: CreepFunctions.workerRole(creep); break;
     }
 
-    if (creep.memory.role === CreepRole.Worker) {
-      // destination 1 is source, destination 2 is home
-      if (
-        creep.memory.jobStatus === CreepJobStatus.FirstDestination
-        && creep.store.getFreeCapacity() === 0
-      ) {
-        creep.memory.jobStatus = CreepJobStatus.SecondDestination;
-      } else if (
-        creep.memory.jobStatus === CreepJobStatus.SecondDestination
-        && creep.store.getUsedCapacity() === 0
-      ) {
-        creep.memory.jobStatus = CreepJobStatus.FirstDestination;
-      } else if (creep.memory.jobStatus === CreepJobStatus.Idle) {
-        creep.memory.jobStatus = CreepJobStatus.FirstDestination;
-      }
-
-      if (creep.memory.jobStatus === CreepJobStatus.FirstDestination) {
-        let source = creep.pos.findClosestByPath(FIND_SOURCES_ACTIVE);
-        if (source) {
-          if (creep.harvest(source) == ERR_NOT_IN_RANGE) {
-            creep.moveTo(source);
-          }
-        }
-      } else if (creep.memory.jobStatus === CreepJobStatus.SecondDestination) {
-        let spawn = creep.pos.findClosestByPath(FIND_MY_SPAWNS);
-        if (spawn) {
-          if (creep.transfer(spawn, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
-            creep.moveTo(spawn);
-          }
-        }
-      }
-
-    }
   }
 
   // Spawn Action Loop
