@@ -1,3 +1,4 @@
+import { CreepJobStatus, CreepRole } from "enums";
 import { ErrorMapper } from "utils/ErrorMapper";
 
 declare global {
@@ -16,9 +17,8 @@ declare global {
   }
 
   interface CreepMemory {
-    role: string;
-    room: string;
-    working: boolean;
+    role: CreepRole;
+    jobStatus: CreepJobStatus;
   }
 
   // Syntax for adding proprties to `global` (ex "global.log")
@@ -34,10 +34,76 @@ declare global {
 export const loop = ErrorMapper.wrapLoop(() => {
   console.log(`Current game tick is ${Game.time}`);
 
-  // Automatically delete memory of missing creeps
-  for (const name in Memory.creeps) {
-    if (!(name in Game.creeps)) {
-      delete Memory.creeps[name];
+  let minimumDesiredCreeps = 10;
+  let home = Game.spawns["Spawn1"].room;
+  let totalEnergy = home.energyAvailable;
+  let costForCreep = 200;
+  let creepSetup = [WORK, CARRY, MOVE];
+
+  // Creep Action Loop
+  let creepCount = 0;
+  for (let creepName in Game.creeps) {
+    let creep = Game.creeps[creepName];
+    creepCount++;
+
+    // on demand memory cleaning
+    if (creep.ticksToLive === 1) {
+      creep.suicide();
+      console.log("killed" + creepName);
+      delete Memory.creeps[creepName];
+    }
+
+    if (creep.memory.role === CreepRole.Worker) {
+      // destination 1 is source, destination 2 is home
+      if (
+        creep.memory.jobStatus === CreepJobStatus.FirstDestination
+        && creep.store.getFreeCapacity() === 0
+      ) {
+        creep.memory.jobStatus = CreepJobStatus.SecondDestination;
+      } else if (
+        creep.memory.jobStatus === CreepJobStatus.SecondDestination
+        && creep.store.getUsedCapacity() === 0
+      ) {
+        creep.memory.jobStatus = CreepJobStatus.FirstDestination;
+      } else if (creep.memory.jobStatus === CreepJobStatus.Idle) {
+        creep.memory.jobStatus = CreepJobStatus.FirstDestination;
+      }
+
+      if (creep.memory.jobStatus === CreepJobStatus.FirstDestination) {
+        let source = creep.pos.findClosestByPath(FIND_SOURCES_ACTIVE);
+        if (source) {
+          if (creep.harvest(source) == ERR_NOT_IN_RANGE) {
+            creep.moveTo(source);
+          }
+        }
+      } else if (creep.memory.jobStatus === CreepJobStatus.SecondDestination) {
+        let spawn = creep.pos.findClosestByPath(FIND_MY_SPAWNS);
+        if (spawn) {
+          if (creep.transfer(spawn, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
+            creep.moveTo(spawn);
+          }
+        }
+      }
+
     }
   }
+
+  // Spawn Action Loop
+  for (let spawnName in Game.spawns) {
+    let spawn = Game.spawns[spawnName];
+    if (creepCount < minimumDesiredCreeps && totalEnergy >= costForCreep) {
+      spawn.spawnCreep(creepSetup, "Worker" + Game.time, {
+        memory: { role: CreepRole.Worker, jobStatus: CreepJobStatus.Idle }
+      });
+    }
+  }
+
+
 });
+
+class RoomMeta {
+  private creepCount = 0;
+  public constructor(private name: string) { }
+  public incrementCreepCount() { this.creepCount++ }
+  public getName() { return this.name }
+}
