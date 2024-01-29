@@ -1,5 +1,5 @@
 import { CreepFunctions } from "creepRoles";
-import { CreepJobStatus, CreepRole } from "enums";
+import { DeliverJob, HarvestJob, JobTypes } from "jobs";
 import { ErrorMapper } from "utils/ErrorMapper";
 
 declare global {
@@ -18,8 +18,8 @@ declare global {
   }
 
   interface CreepMemory {
-    role: CreepRole;
-    jobStatus: CreepJobStatus;
+    currentJob: JobTypes;
+    jobMemory: any | null;
   }
 
   // Syntax for adding proprties to `global` (ex "global.log")
@@ -34,6 +34,11 @@ declare global {
 // This utility uses source maps to get the line numbers and file names of the original, TS source code
 export const loop = ErrorMapper.wrapLoop(() => {
   console.log(`Current game tick is ${Game.time}`);
+  for (const name in Memory.creeps) {
+    if (!(name in Game.creeps)) {
+      delete Memory.creeps[name];
+    }
+  }
 
   let minimumDesiredCreeps = 10;
   let home = Game.spawns["Spawn1"].room;
@@ -49,10 +54,28 @@ export const loop = ErrorMapper.wrapLoop(() => {
 
     CreepFunctions.memorySafeSuicideCheck(creep);
 
-    switch (creep.memory.role) {
-      case CreepRole.Worker: CreepFunctions.workerRole(creep); break;
+    switch (creep.memory.currentJob) {
+      case JobTypes.None:
+        creep.memory.currentJob = JobTypes.Harvest;
+        creep.memory.jobMemory = HarvestJob.createMemory(creep);
+        break;
+      case JobTypes.Harvest:
+        if (HarvestJob.checkComplete(creep)) {
+          creep.memory.currentJob = JobTypes.Deliver;
+          creep.memory.jobMemory = DeliverJob.createMemory(creep);
+        } else {
+          HarvestJob.run(creep, creep.memory.jobMemory);
+        }
+        break;
+      case JobTypes.Deliver:
+        if (DeliverJob.checkComplete(creep)) {
+          creep.memory.currentJob = JobTypes.Harvest;
+          creep.memory.jobMemory = HarvestJob.createMemory(creep);
+        } else {
+          DeliverJob.run(creep, creep.memory.jobMemory);
+        }
+        break;
     }
-
   }
 
   // Spawn Action Loop
@@ -60,17 +83,19 @@ export const loop = ErrorMapper.wrapLoop(() => {
     let spawn = Game.spawns[spawnName];
     if (creepCount < minimumDesiredCreeps && totalEnergy >= costForCreep) {
       spawn.spawnCreep(creepSetup, "Worker" + Game.time, {
-        memory: { role: CreepRole.Worker, jobStatus: CreepJobStatus.Idle }
+        memory: { currentJob: JobTypes.None, jobMemory: null }
       });
     }
   }
-
-
 });
 
 class RoomMeta {
   private creepCount = 0;
-  public constructor(private name: string) { }
-  public incrementCreepCount() { this.creepCount++ }
-  public getName() { return this.name }
+  public constructor(private name: string) {}
+  public incrementCreepCount() {
+    this.creepCount++;
+  }
+  public getName() {
+    return this.name;
+  }
 }
