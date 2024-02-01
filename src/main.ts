@@ -1,5 +1,5 @@
 import { CreepFunctions } from "creepRoles";
-import { DeliverJob, HarvestJob, JobTypes } from "jobs";
+import { DeliverJob, HarvestJob, JobTypes, JobUtility, UpgradeControllerJob } from "jobs";
 import { ErrorMapper } from "utils/ErrorMapper";
 
 declare global {
@@ -40,7 +40,7 @@ export const loop = ErrorMapper.wrapLoop(() => {
     }
   }
 
-  let minimumDesiredCreeps = 10;
+  let minimumDesiredCreeps = 3;
   let home = Game.spawns["Spawn1"].room;
   let totalEnergy = home.energyAvailable;
   let costForCreep = 200;
@@ -56,24 +56,16 @@ export const loop = ErrorMapper.wrapLoop(() => {
 
     switch (creep.memory.currentJob) {
       case JobTypes.None:
-        creep.memory.currentJob = JobTypes.Harvest;
-        creep.memory.jobMemory = HarvestJob.createMemory(creep);
+        JobUtility.AssignRequiredJob(creep);
         break;
       case JobTypes.Harvest:
-        if (HarvestJob.checkComplete(creep)) {
-          creep.memory.currentJob = JobTypes.Deliver;
-          creep.memory.jobMemory = DeliverJob.createMemory(creep);
-        } else {
-          HarvestJob.run(creep, creep.memory.jobMemory);
-        }
+        HarvestJob.checkComplete(creep) ? JobUtility.AssignRequiredJob(creep) : HarvestJob.run(creep);
         break;
       case JobTypes.Deliver:
-        if (DeliverJob.checkComplete(creep)) {
-          creep.memory.currentJob = JobTypes.Harvest;
-          creep.memory.jobMemory = HarvestJob.createMemory(creep);
-        } else {
-          DeliverJob.run(creep, creep.memory.jobMemory);
-        }
+        DeliverJob.checkComplete(creep) ? JobUtility.AssignRequiredJob(creep) : DeliverJob.run(creep);
+        break;
+      case JobTypes.UpgradeController:
+        UpgradeControllerJob.checkComplete(creep) ? JobUtility.AssignRequiredJob(creep) : UpgradeControllerJob.run(creep);
         break;
     }
   }
