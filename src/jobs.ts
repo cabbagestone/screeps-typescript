@@ -42,6 +42,7 @@ export class UpgradeControllerJob extends Job {
   }
 
   public static run(creep: Creep) {
+    if (this.checkComplete(creep)) JobUtility.AssignRequiredJob(creep);
     let controller = this.decodeMemory(creep.memory.jobMemory);
     if (!controller) return;
 
@@ -80,6 +81,7 @@ export class HarvestJob extends Job {
   }
 
   public static run(creep: Creep) {
+    if (this.checkComplete(creep)) JobUtility.AssignRequiredJob(creep);
     let source = this.decodeMemory(creep.memory.jobMemory);
     if (!source) return;
 
@@ -119,6 +121,7 @@ export class DeliverJob extends Job {
   }
 
   public static run(creep: Creep) {
+    if (this.checkComplete(creep)) JobUtility.AssignRequiredJob(creep);
     let target = this.decodeMemory(creep.memory.jobMemory);
     if (!target) return;
 

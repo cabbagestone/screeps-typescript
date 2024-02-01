@@ -55,18 +55,10 @@ export const loop = ErrorMapper.wrapLoop(() => {
     CreepFunctions.memorySafeSuicideCheck(creep);
 
     switch (creep.memory.currentJob) {
-      case JobTypes.None:
-        JobUtility.AssignRequiredJob(creep);
-        break;
-      case JobTypes.Harvest:
-        HarvestJob.checkComplete(creep) ? JobUtility.AssignRequiredJob(creep) : HarvestJob.run(creep);
-        break;
-      case JobTypes.Deliver:
-        DeliverJob.checkComplete(creep) ? JobUtility.AssignRequiredJob(creep) : DeliverJob.run(creep);
-        break;
-      case JobTypes.UpgradeController:
-        UpgradeControllerJob.checkComplete(creep) ? JobUtility.AssignRequiredJob(creep) : UpgradeControllerJob.run(creep);
-        break;
+      case JobTypes.None: JobUtility.AssignRequiredJob(creep); break;
+      case JobTypes.Harvest: HarvestJob.run(creep); break;
+      case JobTypes.Deliver: DeliverJob.run(creep); break;
+      case JobTypes.UpgradeController: UpgradeControllerJob.run(creep); break;
     }
   }
 
