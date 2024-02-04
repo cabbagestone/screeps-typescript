@@ -1,6 +1,9 @@
-// Automatically delete memory of missing creeps
-// for (const name in Memory.creeps) {
-// if (!(name in Game.creeps)) {
-// delete Memory.creeps[name];
-// }
-// }
+plan for how to do screeps
+
+Win
+- capture all controllers
+  - protect obtained controllers
+    - create camps around controllers
+  - obtain new controllers
+    - obtain unconquered controllers
+    - obtain conquered controllers
